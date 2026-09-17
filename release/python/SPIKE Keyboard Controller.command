@@ -11,34 +11,76 @@ PY=".venv/bin/python"
 
 needs_setup() {
     [ -x "$PY" ] || return 0
-    "$PY" -c "import bleak, pynput" >/dev/null 2>&1 || return 0
+    "$PY" -c "import bleak, pynput, tkinter" >/dev/null 2>&1 || return 0
     return 1
 }
 
 if needs_setup; then
     echo "First run only: setting up the Python environment..."
-    if ! python3 -c "import sys" 2>/dev/null; then
+
+    PYHOST=""
+    if command -v python3 >/dev/null 2>&1 && python3 -c "import tkinter" >/dev/null 2>&1; then
+        PYHOST="python3"
+    else
+        for p in /Library/Frameworks/Python.framework/Versions/*/bin/python3 /opt/homebrew/bin/python3 /usr/local/bin/python3; do
+            [ -x "$p" ] || continue
+            if "$p" -c "import tkinter" >/dev/null 2>&1; then
+                PYHOST="$p"
+                break
+            fi
+        done
+    fi
+
+    if [ -z "$PYHOST" ]; then
         echo ""
-        echo "Python 3 needs to be installed on this Mac."
-        echo ""
-        echo "If macOS just popped up a window asking to install"
-        echo "'command line developer tools', click Install and wait"
-        echo "(it takes a few minutes)."
-        echo ""
-        echo "If not, download Python free from:"
+        if command -v python3 >/dev/null 2>&1; then
+            PYMAJMIN="$(python3 -c "import sys; print(f'{sys.version_info[0]}.{sys.version_info[1]}')" 2>/dev/null)"
+        else
+            PYMAJMIN=""
+        fi
+        if [ -n "$PYMAJMIN" ]; then
+            echo "This Mac's Python is missing its GUI toolkit (Tk),"
+            echo "which this app needs for its window."
+            echo ""
+            echo "Easiest fix - run this once in Terminal, then reopen:"
+            echo ""
+            echo "    brew install python-tk@$PYMAJMIN"
+            echo ""
+            echo "Or install a Python that already has Tk built in:"
+        else
+            echo "Python 3 needs to be installed on this Mac."
+            echo ""
+            echo "If macOS just popped up a window asking to install"
+            echo "'command line developer tools', click Install and wait"
+            echo "(it takes a few minutes)."
+            echo ""
+            echo "If not, download Python free from:"
+        fi
         echo "  https://www.python.org/downloads/"
         echo ""
         echo "After installing, double-click this file again."
         read -r _
         exit 1
     fi
+
     rm -rf .venv
-    python3 -m venv .venv || { echo "Could not create the environment."; read -r _; exit 1; }
+    "$PYHOST" -m venv .venv || { echo "Could not create the environment."; read -r _; exit 1; }
     ./.venv/bin/pip install --quiet --upgrade pip
     ./.venv/bin/pip install --quiet bleak pynput || {
         echo "Could not install the libraries. Check your internet connection.";
         read -r _; exit 1;
     }
+    if ! ./.venv/bin/python -c "import tkinter" >/dev/null 2>&1; then
+        echo ""
+        echo "The Python environment was created, but Tk is still missing."
+        echo "Run this once in Terminal, then reopen the app:"
+        echo ""
+        echo "    brew install python-tk@3.13"
+        echo ""
+        echo "(or download Python from https://www.python.org/downloads/)"
+        read -r _
+        exit 1
+    fi
     echo ""
 fi
 
