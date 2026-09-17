@@ -7,6 +7,7 @@
 # This launcher stays in the base folder; the program code lives in ./code
 
 cd "$(dirname "$0")/code" || exit 1
+export TK_SILENCE_DEPRECATION=1
 PY=".venv/bin/python"
 
 needs_setup() {
