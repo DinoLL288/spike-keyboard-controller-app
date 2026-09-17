@@ -779,7 +779,29 @@ class LegoSpikeHub:
             "Motor command: " + " ".join(f"{p}={sp}" for p, sp in slots))
 
     async def stop(self) -> None:
-        await self.drive(0, 0)
+        """Halt every motor port, not just the configured drive slots.
+
+        Programs may spin motors on any of the hub's ports (A..F), so stopping
+        only the drive pair leaves standalone motors running.
+        """
+        if not self._connected or not self._protocol:
+            return
+        profile = self._profile
+        ports = list(dict.fromkeys(profile.all_ports + tuple(config.AVAILABLE_PORTS)))
+
+        if self._protocol == "lwp3":
+            for port in ports:
+                self._send(self._lwp3_motor_frame(port, 0))
+            return
+
+        parts = []
+        for port in ports:
+            parts.append(port)
+            parts.append("+")
+            parts.append("000")
+        cmd_str = "".join([str(len(parts) // 3)] + parts).encode("ascii")
+        self._send(self._prime_tunnel(cmd_str))
+        self._log.info("Motor command: " + " ".join(f"{p}=0" for p in ports))
 
     # -- disconnect --------------------------------------------------------
     async def _force_cleanup(self) -> None:
