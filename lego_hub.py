@@ -315,6 +315,12 @@ class LegoSpikeHub:
 
         order = {"spike": 0, "hub": 1, "unknown": 2}
         found.sort(key=lambda d: (order.get(d["kind"], 3), d["name"].lower()))
+        if not found:
+            self._log.info(
+                "No devices found. Is your Hub on and nearby? Also make sure "
+                "Bluetooth is allowed: System Settings  Privacy & Security  "
+                "Bluetooth."
+            )
         for d in found:
             marker = {"spike": "[SPIKE]", "hub": "[HUB]", "unknown": "[unknown]"}[d["kind"]]
             self._log.info(f"Found {d['name']} {marker} ({d['id']})")

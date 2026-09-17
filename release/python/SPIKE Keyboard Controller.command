@@ -43,11 +43,17 @@ if needs_setup; then
             echo "This Mac's Python is missing its GUI toolkit (Tk),"
             echo "which this app needs for its window."
             echo ""
-            echo "Easiest fix - run this once in Terminal, then reopen:"
-            echo ""
-            echo "    brew install python-tk@$PYMAJMIN"
-            echo ""
-            echo "Or install a Python that already has Tk built in:"
+            if command -v brew >/dev/null 2>&1; then
+                echo "Easiest fix - run this once in Terminal, then reopen:"
+                echo ""
+                echo "    brew install python-tk@$PYMAJMIN"
+                echo ""
+                echo "Otherwise, a Python that already has Tk built in:"
+            else
+                echo "Homebrew isn't installed on this Mac, so the easiest"
+                echo "fix is a Python that already has Tk built in:"
+            fi
+            echo "  https://www.python.org/downloads/"
         else
             echo "Python 3 needs to be installed on this Mac."
             echo ""
@@ -66,10 +72,20 @@ if needs_setup; then
 
     rm -rf .venv
     "$PYHOST" -m venv .venv || { echo "Could not create the environment."; read -r _; exit 1; }
+    ./.venv/bin/python -m ensurepip --upgrade >/dev/null 2>&1 || true
     ./.venv/bin/pip install --quiet --upgrade pip
     ./.venv/bin/pip install --quiet bleak pynput || {
+        if ! ./.venv/bin/python -m pip --version >/dev/null 2>&1; then
+            echo "This Mac's Python couldn't provide pip, so the libraries"
+            echo "cannot be installed. Install Python from python.org, then"
+            echo "double-click this file again:"
+            echo "  https://www.python.org/downloads/"
+            read -r _
+            exit 1
+        fi
         echo "Could not install the libraries. Check your internet connection.";
-        read -r _; exit 1;
+        read -r _;
+        exit 1;
     }
     if ! ./.venv/bin/python -c "import tkinter" >/dev/null 2>&1; then
         echo ""
