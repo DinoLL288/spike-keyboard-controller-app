@@ -35,6 +35,27 @@ _KEYS = {
 }
 
 
+def _current_loop() -> asyncio.AbstractEventLoop:
+    """Return the event loop this controller should use.
+
+    Python 3.9 binds ``asyncio.Queue()`` (and ``get_event_loop()``) to the
+    loop that is current when it is called, so the controller must only touch
+    asyncio primitives once a loop exists. This helper returns the running
+    loop, then the currently-set loop, and only as a last resort creates and
+    installs a fresh one - behaviour that is uniform across 3.9, 3.10 and 3.11+.
+    """
+    try:
+        return asyncio.get_running_loop()
+    except RuntimeError:
+        pass
+    try:
+        return asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        return loop
+
+
 class KeyboardController:
     """Monitors the keyboard and turns key state into drive requests."""
 
@@ -54,7 +75,7 @@ class KeyboardController:
         self._running = False
         self._pressed: set[str] = set()
         self._last_command: Optional[str] = None
-        self._cb_queue: asyncio.Queue = asyncio.Queue()
+        self._cb_queue: Optional[asyncio.Queue] = None
         self._cb_task: Optional[asyncio.Task] = None
 
     @staticmethod
@@ -84,7 +105,7 @@ class KeyboardController:
         self._pressed: set[str] = set()
         self._has_permission = False
         self._last_command: Optional[str] = None
-        self._cb_queue: asyncio.Queue = asyncio.Queue()
+        self._cb_queue: Optional[asyncio.Queue] = None
         self._cb_task: Optional[asyncio.Task] = None
 
     # -- lifecycle ---------------------------------------------------------
@@ -95,7 +116,12 @@ class KeyboardController:
 
     def start(self) -> None:
         """Start the pynput listener. Returns immediately (non-blocking)."""
-        self._loop = asyncio.get_event_loop()
+        # asyncio.Queue (and get_event_loop) on Python 3.9 need a loop that is
+        # current *right now*, so bind the queue here in start() instead of in
+        # __init__/set_callbacks - the controller can then be constructed on
+        # 3.9 even before any event loop exists.
+        self._loop = _current_loop()
+        self._cb_queue = asyncio.Queue()
         self._cb_task = self._loop.create_task(self._callback_loop())
         try:
             self._listener = keyboard.Listener(
@@ -118,6 +144,8 @@ class KeyboardController:
             self._listener = None
         if self._cb_task:
             self._cb_task.cancel()
+            self._cb_task = None
+        self._cb_queue = None
 
     async def shutdown(self) -> None:
         """Stop the listener and ensure motors are stopped."""
@@ -140,7 +168,7 @@ class KeyboardController:
                 pass
 
     def _dispatch(self, coro) -> None:
-        if coro is None:
+        if coro is None or self._cb_queue is None:
             return
         try:
             self._cb_queue.put_nowait(coro)

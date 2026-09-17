@@ -38,7 +38,7 @@ Why: web-browser downloads get a hidden quarantine stamp, so macOS 26 blocks eve
 
 - macOS
 - A LEGO SPIKE Prime (or Robot Inventor) hub with motors plugged into the configured ports (default: `C` = left, `D` = right)
-- Python 3.10+
+- Python 3.9+ (Python 3.9, 3.10, 3.11, 3.12 and 3.13 are all supported)
 
 ```bash
 python3 -m venv .venv
