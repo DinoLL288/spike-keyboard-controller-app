@@ -566,9 +566,12 @@ class SpikeGui:
         self._spin_up = _spin_arrow(1)
         self._spin_down = _spin_arrow(-1)
         step_spin.bind("<Up>", self._spin_up)
-        step_spin.bind("<KP_Up>", self._spin_up)
         step_spin.bind("<Down>", self._spin_down)
-        step_spin.bind("<KP_Down>", self._spin_down)
+        try:
+            step_spin.bind("<KP_Up>", self._spin_up)
+            step_spin.bind("<KP_Down>", self._spin_down)
+        except tk.TclError:
+            pass
 
         up = FlatButton(
             speed_row, text="▲", width=2,
