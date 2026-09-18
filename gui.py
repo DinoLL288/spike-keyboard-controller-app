@@ -221,9 +221,10 @@ class SpikeGui:
         self._log_flush_pending = False
 
         self.root.title(config.WINDOW_TITLE)
-        self.root.geometry("720x900")
+        self.root.geometry("720x900+100+50")
         self.root.minsize(620, 780)
         self.root.configure(bg=BG)
+        self.root.attributes('-alpha', 1.0)
         self.root.deiconify()
         self.root.lift()
 
@@ -1907,6 +1908,10 @@ class SpikeGui:
     def run(self) -> None:
         try:
             self.root.attributes('-topmost', True)
+            self.root.attributes('-alpha', 1.0)
+            self.root.update_idletasks()
+            self.root.update()
+            self.root.after(100, lambda: self.root.update())
             self.root.after(2000, lambda: self.root.attributes('-topmost', False))
             self.root.mainloop()
         finally:
