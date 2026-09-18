@@ -10,9 +10,16 @@ cd "$(dirname "$0")/code" || exit 1
 export TK_SILENCE_DEPRECATION=1
 PY=".venv/bin/python"
 
+# A modern Tk (8.6+) is required. Apple's old system Tk 8.5 opens blank
+# or crashes for many apps; python.org and Homebrew python-tk ship 8.6+.
+tk_ok() {
+    "$1" -c "import tkinter, sys; sys.exit(0 if tkinter.TkVersion >= 8.6 else 1)" >/dev/null 2>&1
+}
+
 needs_setup() {
     [ -x "$PY" ] || return 0
     "$PY" -c "import bleak, pynput, tkinter" >/dev/null 2>&1 || return 0
+    "$PY" -c "import tkinter, sys; sys.exit(0 if tkinter.TkVersion >= 8.6 else 1)" >/dev/null 2>&1 || return 0
     return 1
 }
 
@@ -20,12 +27,12 @@ if needs_setup; then
     echo "First run only: setting up the Python environment..."
 
     PYHOST=""
-    if command -v python3 >/dev/null 2>&1 && python3 -c "import tkinter" >/dev/null 2>&1; then
+    if command -v python3 >/dev/null 2>&1 && tk_ok python3; then
         PYHOST="python3"
     else
         for p in /Library/Frameworks/Python.framework/Versions/*/bin/python3 /opt/homebrew/bin/python3 /usr/local/bin/python3; do
             [ -x "$p" ] || continue
-            if "$p" -c "import tkinter" >/dev/null 2>&1; then
+            if tk_ok "$p"; then
                 PYHOST="$p"
                 break
             fi
@@ -34,12 +41,25 @@ if needs_setup; then
 
     if [ -z "$PYHOST" ]; then
         echo ""
+        PYMAJMIN=""
+        TKV=""
         if command -v python3 >/dev/null 2>&1; then
             PYMAJMIN="$(python3 -c "import sys; print(f'{sys.version_info[0]}.{sys.version_info[1]}')" 2>/dev/null)"
-        else
-            PYMAJMIN=""
+            TKV="$(python3 -c "import tkinter; print(tkinter.TkVersion)" 2>/dev/null)"
         fi
-        if [ -n "$PYMAJMIN" ]; then
+        if [ -n "$TKV" ]; then
+            echo "This Mac's Python draws its windows with Apple's old,"
+            echo "deprecated Tk $TKV, which is known to open blank or crash."
+            echo ""
+            echo "Please install Python from python.org (it includes a"
+            echo "modern Tk), then double-click this file again:"
+            echo "  https://www.python.org/downloads/"
+            if command -v brew >/dev/null 2>&1; then
+                echo ""
+                echo "Or update Tk for the Python you already have:"
+                echo "    brew install python-tk@$PYMAJMIN"
+            fi
+        elif [ -n "$PYMAJMIN" ]; then
             echo "This Mac's Python is missing its GUI toolkit (Tk),"
             echo "which this app needs for its window."
             echo ""
@@ -62,8 +82,8 @@ if needs_setup; then
             echo "(it takes a few minutes)."
             echo ""
             echo "If not, download Python free from:"
+            echo "  https://www.python.org/downloads/"
         fi
-        echo "  https://www.python.org/downloads/"
         echo ""
         echo "After installing, double-click this file again."
         read -r _
@@ -87,14 +107,11 @@ if needs_setup; then
         read -r _;
         exit 1;
     }
-    if ! ./.venv/bin/python -c "import tkinter" >/dev/null 2>&1; then
+    if ! tk_ok "$PY"; then
         echo ""
-        echo "The Python environment was created, but Tk is still missing."
-        echo "Run this once in Terminal, then reopen the app:"
-        echo ""
-        echo "    brew install python-tk@3.13"
-        echo ""
-        echo "(or download Python from https://www.python.org/downloads/)"
+        echo "The Python environment was created, but its Tk window toolkit"
+        echo "is missing or too old (this app needs Tk 8.6 or newer)."
+        echo "Install Python from https://www.python.org/downloads/ and reopen."
         read -r _
         exit 1
     fi
