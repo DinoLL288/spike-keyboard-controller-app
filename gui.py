@@ -224,6 +224,7 @@ class SpikeGui:
         self.root.geometry("720x900+100+50")
         self.root.minsize(620, 780)
         self.root.configure(bg=BG)
+        self.root.tk_setPalette(background=BG, foreground=TEXT)
         self.root.attributes('-alpha', 1.0)
         self.root.deiconify()
         self.root.lift()
