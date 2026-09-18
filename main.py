@@ -16,7 +16,9 @@ import traceback
 def _ensure_tk() -> tk.Tk:
     """Create the root window, reporting a friendly error if we cannot."""
     try:
-        return tk.Tk()
+        root = tk.Tk()
+        print(f"[SPIKE] Tk version: {tk.TkVersion}")
+        return root
     except Exception:
         # No display / tkinter unavailable. On a desktop Mac this is rare.
         import tkinter.messagebox as mb
@@ -36,6 +38,7 @@ def _ensure_tk() -> tk.Tk:
 def main() -> int:
     from console_helper import attach_console
 
+    print("[SPIKE] Starting up...")
     attach_console()
 
     from lego_hub import LegoSpikeHub
@@ -47,17 +50,22 @@ def main() -> int:
     asyncio.set_event_loop(loop)
 
     try:
+        print("[SPIKE] Creating window...")
         root = _ensure_tk()
+        print("[SPIKE] Window created.")
     except Exception:
         loop.close()
+        traceback.print_exc()
         print("Cannot launch GUI. Exiting.")
         return 1
 
     try:
+        print("[SPIKE] Setting up hub and keyboard...")
         sink = _make_log_sink()
         hub = LegoSpikeHub(log=sink)
         kb = KeyboardController()
         # The GUI realigns the callbacks to the actual hub/gui methods below.
+        print("[SPIKE] Building GUI...")
         app = SpikeGui(root, loop, hub, kb)
         sink.set_gui(app)  # hub + bleak messages now also appear in the GUI log
         hub.on_attach = app.show_motors  # live motor-attachment readout
@@ -70,6 +78,7 @@ def main() -> int:
             on_quit=app.handle_quit,
         )
 
+        print("[SPIKE] Starting event loop.")
         try:
             app.run()
         except Exception:
@@ -82,6 +91,10 @@ def main() -> int:
                 pass
             kb.stop()
         return 0
+    except Exception:
+        traceback.print_exc()
+        print("SPIKE hit a fatal error during startup.")
+        return 1
     finally:
         loop.close()
 

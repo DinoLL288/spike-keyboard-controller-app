@@ -220,6 +220,7 @@ class SpikeGui:
         self._log_pending: list[tuple[str, tuple]] = []
         self._log_flush_pending = False
 
+        print("[SPIKE] Configuring window...")
         self.root.title(config.WINDOW_TITLE)
         self.root.geometry("720x900+100+50")
         self.root.minsize(620, 780)
@@ -229,15 +230,18 @@ class SpikeGui:
         self.root.deiconify()
         self.root.lift()
 
+        print("[SPIKE] Building style...")
         self._build_style()
+        print("[SPIKE] Building UI...")
         self._build_ui()
 
         # Start the keyboard listener (non-blocking). If it did not start,
         # the macOS Accessibility permission is most likely missing.
+        print("[SPIKE] Starting keyboard listener...")
         self.kb.start()
         if not self.kb.available:
             self._show_permission_banner()
-
+        print("[SPIKE] Ready.")
         self._log(f"{config.APP_NAME} v{config.APP_VERSION} ready. Click SCAN to find your Hub.")
         self._pump_after()
         self._pulse()
@@ -1908,6 +1912,7 @@ class SpikeGui:
 
     def run(self) -> None:
         try:
+            print("[SPIKE] Entering mainloop.")
             self.root.attributes('-topmost', True)
             self.root.attributes('-alpha', 1.0)
             self.root.update_idletasks()
@@ -1915,6 +1920,7 @@ class SpikeGui:
             self.root.after(100, lambda: self.root.update())
             self.root.after(2000, lambda: self.root.attributes('-topmost', False))
             self.root.mainloop()
+            print("[SPIKE] Mainloop ended.")
         finally:
             # Best-effort safety cleanup (stop motors) on window close.
             try:
