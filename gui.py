@@ -224,6 +224,8 @@ class SpikeGui:
         self.root.geometry("720x900")
         self.root.minsize(620, 780)
         self.root.configure(bg=BG)
+        self.root.deiconify()
+        self.root.lift()
 
         self._build_style()
         self._build_ui()
@@ -1904,6 +1906,8 @@ class SpikeGui:
 
     def run(self) -> None:
         try:
+            self.root.attributes('-topmost', True)
+            self.root.after(2000, lambda: self.root.attributes('-topmost', False))
             self.root.mainloop()
         finally:
             # Best-effort safety cleanup (stop motors) on window close.
