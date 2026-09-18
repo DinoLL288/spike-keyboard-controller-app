@@ -16,7 +16,7 @@ import traceback
 def _ensure_tk() -> tk.Tk:
     """Create the root window, reporting a friendly error if we cannot."""
     try:
-        root = tk.Tk()
+        return tk.Tk()
     except Exception:
         # No display / tkinter unavailable. On a desktop Mac this is rare.
         import tkinter.messagebox as mb
@@ -31,22 +31,6 @@ def _ensure_tk() -> tk.Tk:
         except Exception:
             pass
         raise
-
-    if tk.TkVersion < 8.6:
-        # Apple's system Tk 8.5 opens a blank window or crashes for many apps.
-        print(
-            "This Mac's Python uses Apple's old, deprecated Tk "
-            f"{tk.TkVersion}, which cannot display the app window.\n"
-            "Please install Python from https://www.python.org/downloads/ "
-            "and run the app again.",
-            flush=True,
-        )
-        try:
-            root.destroy()
-        except Exception:
-            pass
-        raise RuntimeError("Tk 8.6 or newer is required")
-    return root
 
 
 def main() -> int:
