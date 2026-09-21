@@ -1415,6 +1415,8 @@ class SpikeGui:
     def _on_tk_key(self, event) -> str | None:
         k = self._target_key(event.keysym)
         if k:
+            if self._stop_engaged:
+                return "break"
             if k not in self._phys_keys:
                 self._log(f"key: {k} down")
                 self.stats.bump(f"key_{k.upper()}")
@@ -1423,10 +1425,14 @@ class SpikeGui:
             return "break"
         vs = getattr(event, "keysym", "")
         if vs in ("Up", "KP_Up"):
+            if self._stop_engaged:
+                return "break"
             self._log(f"key: speed +{self.speed_step.get()}")
             self._nudge_speed(self.speed_step.get())
             return "break"
         if vs in ("Down", "KP_Down"):
+            if self._stop_engaged:
+                return "break"
             self._log(f"key: speed -{self.speed_step.get()}")
             self._nudge_speed(-self.speed_step.get())
             return "break"
@@ -1542,6 +1548,8 @@ class SpikeGui:
         return self._command_for(self._pad_held)
 
     def _pad_press(self, key: str) -> None:
+        if self._stop_engaged:
+            return
         btn = getattr(self, f"_pad_{key}")
         btn.configure(bg=PAD_DOWN_BG, fg=WHITE)
         self.stats.bump(f"key_{key.upper()}")
@@ -1557,9 +1565,9 @@ class SpikeGui:
     def _toggle_stop(self) -> None:
         """Flip the handbrake.
 
-        While pulled, drive commands are held at 0,0 (new key presses too);
-        the currently-held keys are kept so that releasing the brake resumes
-        driving the instant it is released. Pressing SPACE again releases it.
+        While pulled, all drive input is ignored (only SPACE releases it):
+        held keys are cleared and new W/A/S/D presses do nothing until the
+        brake is released. Pressing SPACE again releases it.
         """
         now = time.monotonic()
         if now - self._space_toggled_at < 0.3:
@@ -1570,10 +1578,17 @@ class SpikeGui:
         self.stats.bump("space_pressed")
         if self._stop_engaged:
             self.stats.bump("handbrake_pulls")
-            # Keep _phys_keys/_pad_held untouched: _apply_held() ignores them
-            # while braking, but they drive again the moment the brake is off.
+            # Drop all held drive keys so nothing is stuck down and nothing
+            # resumes on release; only the brake release can move again.
+            self._phys_keys.clear()
+            self._pad_held.clear()
+            self._show_pad_keys(set())
+            try:
+                self._step_before_brake = int(self.speed_step.get())
+            except Exception:
+                self._step_before_brake = config.DEFAULT_SPEED_STEP
+            # Let _send_axis dedupe itself so the stop is actually transmitted.
             self._last_held = None
-            self._last_axis = (0, 0, 0)
             self._send_axis(0, 0, 0)
             self._log("HANDBRAKE: pulled  (SPACE again to release)")
         else:
@@ -1593,6 +1608,12 @@ class SpikeGui:
             btn.label.config(text="SPACE = HANDBRAKE")
 
     def _on_speed_change(self, val) -> None:
+        if self._stop_engaged:
+            try:
+                self.speed_slider.set(self.speed.get())
+            except Exception:
+                pass
+            return
         self.speed.set(int(round(float(val))))
         self.stats.max("max_speed", self.speed.get())
         if self.connected:
@@ -1600,6 +1621,9 @@ class SpikeGui:
 
     def _on_step_change(self) -> None:
         # clamp whatever was typed into the STEP spinbox
+        if self._stop_engaged:
+            self.speed_step.set(getattr(self, "_step_before_brake", config.DEFAULT_SPEED_STEP))
+            return
         try:
             step = int(self.speed_step.get())
         except Exception:
@@ -1608,6 +1632,8 @@ class SpikeGui:
 
     def _nudge_speed(self, delta: int) -> None:
         """Change the drive speed by `delta`, clamped to the speed range."""
+        if self._stop_engaged:
+            return
         try:
             step = int(delta)
         except Exception:
@@ -1812,6 +1838,9 @@ class SpikeGui:
 
     def handle_key_state(self, state: dict):
         """Called by pynput when the drive vector changes (permission mode)."""
+        if self._stop_engaged:
+            self._phys_keys = set()
+            return asyncio.sleep(0)
         keys = state.get("keys")
         if keys is None:
             keys = self._COMMAND_KEYS.get(state.get("command", "stop"), set())
@@ -1857,6 +1886,8 @@ class SpikeGui:
 
     # ------------------------------------------------------------- test drive
     def _on_test_press(self, _event=None) -> None:
+        if self._stop_engaged:
+            return
         if self.connected:
             self.stats.bump("test_spins")
             s = self._current_speed()
