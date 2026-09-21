@@ -968,7 +968,7 @@ function reapplyHeld() {
   paintPad(held);
   const cmd = commandFor(held);
   if (cmd!=='stop') bump(cmd);
-  if (stopEngaged) { lastAxis=[0,0,0]; sendAxis(0,0,0); return; }
+  if (stopEngaged) { sendAxis(0,0,0); return; }
   const [l,r] = axisFor(cmd, speed);
   let back=0; const f=held.has('w'), b=held.has('s')&&!f;
   if (mode==='4WD') { if (f) back=speed; else if (b) back=-speed; }
@@ -986,7 +986,7 @@ function toggleStop() {
   if (now - spaceToggledAt < 300) return;
   spaceToggledAt = now; stopEngaged = !stopEngaged; bump('space_pressed');
   $('spBtn').classList.toggle('eng', stopEngaged);
-  if (stopEngaged) { bump('handbrake_pulls'); lastAxis=[0,0,0]; sendAxis(0,0,0); log('HANDBRAKE: pulled  (SPACE again to release)'); }
+  if (stopEngaged) { bump('handbrake_pulls'); physKeys.clear(); padKeys.clear(); paintPad(new Set()); sendAxis(0,0,0); log('HANDBRAKE: pulled  (SPACE again to release)'); }
   else { bump('handbrake_releases'); lastAxis=null; log('HANDBRAKE: released'); reapplyHeld(); }
 }
 
@@ -1021,7 +1021,7 @@ document.querySelectorAll('.wk').forEach(btn => {
   btn.addEventListener("pointerup", () => padRelease(btn.dataset.k));
   btn.addEventListener("pointerleave", () => padRelease(btn.dataset.k));
 });
-function padPress(k) { if (k==='space') { toggleStop(); return; } if (!padKeys.has(k)) { padKeys.add(k); bump('key_'+k.toUpperCase()); } reapplyHeld(); }
+function padPress(k) { if (k==='space') { toggleStop(); return; } if (stopEngaged) return; if (!padKeys.has(k)) { padKeys.add(k); bump('key_'+k.toUpperCase()); } reapplyHeld(); }
 function padRelease(k) { if (k==='space') return; padKeys.delete(k); reapplyHeld(); }
 
 const KEY_MAP = {' ':'space','Spacebar':'space','ArrowUp':'up','ArrowDown':'down','ArrowLeft':'left','ArrowRight':'right','Enter':'enter'};
@@ -1037,6 +1037,7 @@ window.addEventListener("keydown", (e) => {
   const k = KEY_MAP[raw] || (raw.length===1 ? raw.toLowerCase() : null);
   if (!k) return;
   if (k==='space') { if (!e.repeat) toggleStop(); return; }
+  if (stopEngaged) return;
   if (!physKeys.has(k)) {
     physKeys.add(k);
     bump('key_'+k.toUpperCase());
