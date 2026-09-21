@@ -878,6 +878,7 @@ function cycleSlot(key) {
   const ports = C.AVAILABLE_PORTS.filter(p => !used.has(p) || p === store[key]);
   const idx = ports.indexOf(store[key]);
   store[key] = ports[idx+1] || null;
+  refreshSlotUI();
   applyProfile();
   log('DRIVE CONFIG: ' + mode + '  F1='+(front.f1||'-')+' F2='+(front.f2||'-')+' B1='+(back.b1||'-')+' B2='+(back.b2||'-'));
   reapplyHeld();
@@ -1047,12 +1048,17 @@ window.addEventListener("keydown", (e) => {
   const k = KEY_MAP[raw] || (raw.length===1 ? raw.toLowerCase() : null);
   if (!k) return;
   if (k==='space') { if (!e.repeat) toggleStop(); return; }
-  if (!physKeys.has(k)) { physKeys.add(k); bump('key_'+k.toUpperCase()); }
+  if (!physKeys.has(k)) {
+    physKeys.add(k);
+    bump('key_'+k.toUpperCase());
+    if (['w','a','s','d'].includes(k)) log('key: ' + k + ' down', 'dim');
+  }
   reapplyHeld();
 });
 window.addEventListener("keyup", (e) => {
   const k = KEY_MAP[e.key] || (e.key.length===1 ? e.key.toLowerCase() : null);
   if (!k || k==='space') return;
+  if (physKeys.has(k) && ['w','a','s','d'].includes(k)) log('key: ' + k + ' up', 'dim');
   physKeys.delete(k); reapplyHeld();
 });
 window.addEventListener("blur", () => { physKeys.clear(); padKeys.clear(); if (testHolding) releaseTest(); reapplyHeld(); });
