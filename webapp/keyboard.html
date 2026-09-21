@@ -994,6 +994,7 @@ function toggleStop() {
 // SPEED / STEP
 // ==========================================================================
 function nudge(d) {
+  if (stopEngaged) return;
   const next = Math.max(C.SPEED_MIN, Math.min(C.SPEED_MAX, speed + d));
   if (next===speed) return;
   bump(d>0?'arrows_up':'arrows_down'); bump('speed_changes');
@@ -1002,11 +1003,12 @@ function nudge(d) {
   reapplyHeld();
 }
 $('spd').addEventListener("input", function() {
+  if (stopEngaged) { $('spd').value = speed; return; }
   speed = Math.max(C.SPEED_MIN, Math.min(C.SPEED_MAX, parseInt(this.value,10)||0));
   $('spdVal').textContent=speed+'%'; $('tSpd').textContent=speed+'%';
   maxstat('max_speed', speed); reapplyHeld();
 });
-function clampStep() { stepVal = Math.max(1, Math.min(50, parseInt($('step').value,10)||C.DEFAULT_SPEED_STEP)); $('step').value=stepVal; }
+function clampStep() { if (stopEngaged) { $('step').value = stepVal; return; } stepVal = Math.max(1, Math.min(50, parseInt($('step').value,10)||C.DEFAULT_SPEED_STEP)); $('step').value=stepVal; }
 $('step').addEventListener("change", clampStep);
 $('nUp').addEventListener("click", () => nudge(stepVal));
 $('nDn').addEventListener("click", () => nudge(-stepVal));
