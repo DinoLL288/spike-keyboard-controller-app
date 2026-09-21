@@ -325,10 +325,6 @@
         </div>
       </div>
     </div>
-    <div class="tm-row">
-      <span class="tm-label">TEST MOTORS (HOLD)</span>
-      <button class="btn test" id="testBtn">TEST / HOLD</button>
-    </div>
   </div>
 
   <!-- Log -->
@@ -619,7 +615,6 @@ const reversed = new Set(C.REVERSED_PORTS || []);
 const motors = {};
 const rotation = {};
 const prevAngle = {};
-let testHolding = false;
 let logLines = 0;
 let logClearAt = 600;
 
@@ -1016,13 +1011,7 @@ $('step').addEventListener("change", clampStep);
 $('nUp').addEventListener("click", () => nudge(stepVal));
 $('nDn').addEventListener("click", () => nudge(-stepVal));
 
-// ==========================================================================
-// TEST MOTORS
-// ==========================================================================
-$('testBtn').addEventListener("pointerdown", (e) => { e.preventDefault(); if (!connected) return; testHolding=true; bump('test_spins'); log('TEST: spinning at speed '+speed+'...'); hub.drive(speed,speed,speed); });
-$('testBtn').addEventListener("pointerup", releaseTest);
-$('testBtn').addEventListener("pointerleave", releaseTest);
-function releaseTest() { if (!testHolding) return; testHolding=false; if (connected) hub.drive(0,0); reapplyHeld(); }
+// TEST MOTORS button removed in public build.
 
 // ==========================================================================
 // WASD PAD + KEYBOARD
@@ -1061,7 +1050,7 @@ window.addEventListener("keyup", (e) => {
   if (physKeys.has(k) && ['w','a','s','d'].includes(k)) log('key: ' + k + ' up', 'dim');
   physKeys.delete(k); reapplyHeld();
 });
-window.addEventListener("blur", () => { physKeys.clear(); padKeys.clear(); if (testHolding) releaseTest(); reapplyHeld(); });
+window.addEventListener("blur", () => { physKeys.clear(); padKeys.clear(); reapplyHeld(); });
 
 // ==========================================================================
 // MOTOR CARDS
