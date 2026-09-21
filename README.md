@@ -88,3 +88,27 @@ To also build the classic double-click `.app` bundle (these show the macOS "cann
 - Upload flow follows the official `spike-prime-docs` examples: InfoRequest → ClearSlot → StartFileUpload → TransferChunk (4-byte-padded CRC32) → ProgramFlow.
 - Drive commands are sent as tunnel messages (`0x32`) with a compact ASCII payload, e.g. `2C+050D+050`.
 - Hub↔app tunnel replies (`0x33`) carry `rdy` acks and `attach:` motor reports.
+
+---
+
+## One-command download (Terminal)
+
+```bash
+cd ~/Downloads && rm -rf spike-keyboard-controller-app spike-src.zip \
+  && curl -L -o spike-src.zip https://github.com/DinoLL288/spike-keyboard-controller-app/archive/refs/heads/main.zip \
+  && unzip -q spike-src.zip && mv spike-keyboard-controller-app-main spike-keyboard-controller-app \
+  && rm spike-src.zip && echo "done -> ~/Downloads/spike-keyboard-controller-app"
+```
+
+Or clone with history:
+
+```bash
+cd ~/Downloads && rm -rf spike-keyboard-controller-app \
+  && git clone https://github.com/DinoLL288/spike-keyboard-controller-app.git spike-keyboard-controller-app
+```
+
+Then launch:
+
+```bash
+open "$HOME/Downloads/spike-keyboard-controller-app/SPIKE_Apps"
+```
