@@ -304,9 +304,14 @@ class SpikeGui:
               background=[("selected", PANEL2), ("active", BTN_HI)],
               foreground=[("selected", CYAN), ("active", TEXT)])
 
-    def _card(self, parent, text: str) -> ttk.LabelFrame:
+    def _card(self, parent, text: str, expand: bool = False) -> ttk.LabelFrame:
+        """Build a titled card. With expand=True it fills all remaining
+        vertical space in its parent tab (used by the LIVE LOG)."""
         card = ttk.LabelFrame(parent, text=text, padding=(10, 6))
-        card.pack(fill="x", padx=12, pady=(6, 0))
+        if expand:
+            card.pack(fill="both", expand=True, padx=12, pady=(6, 0))
+        else:
+            card.pack(fill="x", padx=12, pady=(6, 0))
         return card
 
     def _build_ui(self) -> None:
@@ -369,7 +374,7 @@ class SpikeGui:
         tabbar.pack(fill="x", padx=12, pady=(6, 0))
         self._tabbar = tabbar
         self._tab_btns: dict[str, FlatButton] = {}
-        for key, label in (("ctl", "▸  CONTROLLER"), ("sts", "◉  STATS")):
+        for key, label in (("ctl", "▸  CONTROLLER"), ("sts", "◉  STATS"), ("log", "▸▸  LIVE LOG")):
             b = FlatButton(
                 tabbar, text=label, padx=12, pady=3,
                 command=lambda k=key: self._show_tab(k),
@@ -382,11 +387,14 @@ class SpikeGui:
         self._content = content
         ctl_tab = tk.Frame(content, bg=BG)
         sts_tab = tk.Frame(content, bg=BG)
-        for frame in (ctl_tab, sts_tab):
+        log_tab = tk.Frame(content, bg=BG)
+        for frame in (ctl_tab, sts_tab, log_tab):
             frame.place(relx=0, rely=0, relwidth=1, relheight=1)
         self._ctl_tab = ctl_tab
         self._sts_tab = sts_tab
+        self._log_tab = log_tab
         self._stats_visible = False
+        self._log_visible = False
         ctl_tab.lift()
         self._paint_tabbar()
 
@@ -546,6 +554,11 @@ class SpikeGui:
         )
         self.speed_slider.set(self.speed.get())
         self.speed_slider.pack(side="left", fill="x", expand=True)
+        # Aqua ttk.Scale advances one notch per trough click; rebind so a click
+        # parks the thumb exactly where the pointer is (handler:
+        # _slider_jump_to_pointer; handbrake choke: _nudge_speed).
+        self.speed_slider.bind("<ButtonPress-1>",
+                               self._slider_jump_to_pointer, add="+")
         tk.Label(speed_row, textvariable=self.speed, bg=BG,
                  fg=AMBER, font=("Menlo", 11, "bold"), width=4).pack(
                      side="left", padx=(8, 0))
@@ -610,7 +623,7 @@ class SpikeGui:
         self.test_btn = tb
 
         # ---- Live log terminal -----------------------------------------
-        log = self._card(ctl_tab, "▸▸  LIVE LOG  (terminal output)")
+        log = self._card(log_tab, "▸▸  LIVE LOG  (terminal output)", expand=True)
         self.log_text = tk.Text(
             log, height=11, bg=LOGBG, fg=LOGFG, insertbackground=GREEN,
             state="disabled", wrap="word", relief="flat", highlightthickness=0,
@@ -646,33 +659,6 @@ class SpikeGui:
         self._motor_spin_vars: dict[str, tk.StringVar] = {}
         self._motor_bars: dict[str, tk.Canvas] = {}
         self._motor_accent: dict[str, str] = {}
-
-        # ---- HERO: battery gauge + live tiles ----------------------------
-        hero = tk.Frame(parent, bg=BG)
-        hero.pack(fill="x", padx=14, pady=(14, 4))
-
-        gauge_box = tk.Frame(hero, bg=PANEL, padx=14, pady=10)
-        gauge_box.pack(side="left", anchor="n")
-        self._battery_canvas = tk.Canvas(
-            gauge_box, width=128, height=132, bg=PANEL, highlightthickness=0)
-        self._battery_canvas.pack()
-
-        tiles = tk.Frame(hero, bg=BG)
-        tiles.pack(side="left", fill="both", expand=True, padx=(10, 0))
-        for key, label in (("live_conn", "CONNECTION"),
-                           ("live_speed", "SPEED"),
-                           ("live_theme", "THEME"),
-                           ("live_temp", "HUB TEMP")):
-            box = tk.Frame(tiles, bg=PANEL2, padx=14, pady=6)
-            box.pack(fill="x", pady=(0, 6))
-            tk.Label(box, text=label, bg=PANEL2, fg=MUTED,
-                     font=("SF Pro Text", 8, "bold")).pack(anchor="w")
-            var = tk.StringVar(value="—")
-            self._stat_vars[key] = var
-            val = tk.Label(box, textvariable=var, bg=PANEL2, fg=CYAN,
-                           font=("Menlo", 12, "bold"), anchor="w")
-            val.pack(fill="x")
-            self._tile_labels[key] = val
 
         # ---- MOTOR ROTATION cards ----------------------------------------
         motor_card = ttk.LabelFrame(
@@ -922,7 +908,7 @@ class SpikeGui:
             try:
                 if not btn.winfo_exists():
                     continue
-                active = (key == ("sts" if self._stats_visible else "ctl"))
+                active = (key == ("log" if getattr(self, "_log_visible", False) else "sts" if self._stats_visible else "ctl"))
                 btn.config(bg=PANEL2 if active else BTN,
                            fg=CYAN if active else MUTED,
                            activebg=BTN_HI)
@@ -930,23 +916,31 @@ class SpikeGui:
                 pass
 
     def _show_tab(self, key: str) -> None:
-        """Switch tabs by raising the frame - both stay mapped, so no relayout
-        cost and no "everything unloads" freeze on slower Macs."""
+        """Switch tabs - every frame stays permanently mapped, so switching
+        is instant and there is no "everything unloads" freeze on slower Macs.
+        The LIVE LOG now lives on its own tab."""
         if key == "sts":
             if not getattr(self, "_stats_visible", False):
                 self._stats_visible = True
+                self._log_visible = False
                 self._sts_tab.lift()
                 self._paint_tabbar()
                 try:
                     self._refresh_stats_page()
                 except Exception:
                     pass
-        else:
-            if getattr(self, "_stats_visible", True):
+        elif key == "log":
+            if not getattr(self, "_log_visible", False):
+                self._log_visible = True
                 self._stats_visible = False
+                self._log_tab.lift()
+                self._paint_tabbar()
+        else:
+            if getattr(self, "_stats_visible", True) or getattr(self, "_log_visible", True):
+                self._stats_visible = False
+                self._log_visible = False
                 self._ctl_tab.lift()
                 self._paint_tabbar()
-
     def _on_hub_state(self, state: dict) -> None:
         """Live 1 Hz telemetry from the hub bridge: battery + motor angles.
 
@@ -1606,8 +1600,33 @@ class SpikeGui:
             step = config.DEFAULT_SPEED_STEP
         self.speed_step.set(max(1, min(50, step)))
 
+    def _slider_jump_to_pointer(self, event) -> None:
+        """Click maps the thumb to the exact pointer x on the speed track.
+
+        Native Aqua ttk.Scale only steps one notch per trough click; Aqua
+        users instead expect a click to park the thumb where they clicked.
+        """
+        try:
+            w = self.speed_slider.winfo_width()
+            if w <= 1:
+                return
+            frac = max(0.0, min(1.0, event.x / float(w)))
+            lo = float(self.speed_slider.cget("from"))
+            hi = float(self.speed_slider.cget("to"))
+            val = int(round(lo + frac * (hi - lo)))
+            self.speed_slider.set(val)          # native command then applies
+        except Exception:
+            pass
+
     def _nudge_speed(self, delta: int) -> None:
-        """Change the drive speed by `delta`, clamped to the speed range."""
+        """Change the drive speed by `delta`, clamped to the speed range.
+
+        Handbrake choke: while SPACE is held the speed keys must not change
+        speed, otherwise the brake would be fighting the arrows.
+        """
+        if getattr(self, "_stop_engaged", False):
+            self._log("SPEED keys ignored - HANDBRAKE ON (release with SPACE)")
+            return
         try:
             step = int(delta)
         except Exception:
