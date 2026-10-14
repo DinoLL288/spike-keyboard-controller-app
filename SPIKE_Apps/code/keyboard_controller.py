@@ -26,6 +26,37 @@ from typing import Awaitable, Callable, Optional
 
 from pynput import keyboard
 
+try:
+    # macOS 26 + pynput 1.8.x crash fix.
+    #
+    # pynput's stock macOS listener also taps ``NSSystemDefined`` events (media
+    # and other "special" keys). For each of those it constructs an NSEvent via
+    # ``NSEvent.eventWithCGEvent_`` inside the event-tap callback, which runs on
+    # the listener's *background* thread. On macOS 26 that constructor reaches
+    # the Text Services caps-lock code, which asserts it is running on the main
+    # dispatch queue - and, running off the main thread, it instead aborts the
+    # whole process with SIGTRAP (EXC_BREAKPOINT).
+    #
+    # We only ever care about ordinary keys (W/A/S/D/Space/Q), so we build a
+    # listener whose event mask omits ``NSSystemDefined``. That removes the only
+    # call to the unsafe constructor and the crash along with it.
+    from Quartz import (  # type: ignore
+        CGEventMaskBit,
+        kCGEventKeyDown,
+        kCGEventKeyUp,
+        kCGEventFlagsChanged,
+    )
+    from pynput.keyboard._darwin import Listener as _DarwinListener  # type: ignore
+
+    class _KeyboardListener(_DarwinListener):
+        _EVENTS = (
+            CGEventMaskBit(kCGEventKeyDown)
+            | CGEventMaskBit(kCGEventKeyUp)
+            | CGEventMaskBit(kCGEventFlagsChanged)
+        )
+except Exception:  # not macOS, or a different pynput layout
+    _KeyboardListener = keyboard.Listener
+
 # Pieces of the keyboard a robot can be doing at any instant.
 _KEYS = {
     "w": "forward",
@@ -124,7 +155,7 @@ class KeyboardController:
         self._cb_queue = asyncio.Queue()
         self._cb_task = self._loop.create_task(self._callback_loop())
         try:
-            self._listener = keyboard.Listener(
+            self._listener = _KeyboardListener(
                 on_press=self._on_press, on_release=self._on_release
             )
             self._listener.start()
