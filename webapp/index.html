@@ -20,6 +20,10 @@
   .cards { display: grid; grid-template-columns: 1fr; gap: 16px; }
   .card { display: block; background: #151a22; border: 1px solid #232b36; border-radius: 14px; padding: 22px; text-decoration: none; color: inherit; transition: border-color .15s, transform .1s; }
   .card:hover { border-color: #8ab800; transform: translateY(-2px); }
+  .card.feedback { text-align: center; background: #131823; border-style: dashed; }
+  .card.feedback:hover { border-color: #4fd8ff; }
+  .card.feedback .btn { display: inline-block; margin-top: 12px; background: #4fd8ff; color: #07131c; font-size: 14px; font-weight: 800; padding: 11px 22px; border-radius: 10px; text-decoration: none; }
+  .card.feedback .btn:hover { background: #7ce4ff; }
   .card .icon { font-size: 30px; }
   .card h2 { font-size: 18px; font-weight: 800; margin: 10px 0 6px; }
   .card .tag { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 1px; color: #ffd23f; border: 1px solid #3a3320; background: #241f14; border-radius: 20px; padding: 3px 10px; margin-bottom: 10px; }
@@ -47,6 +51,13 @@
       <p>Drive your robot with W/A/S/D on the same page, or tap the on-screen pad. Configure wheels, ports, reverse and speed exactly like the desktop app.</p>
       <div class="go">Open the controller →</div>
     </a>
+  </div>
+
+  <div class="card feedback">
+    <div class="icon">💬</div>
+    <h2>Got feedback?</h2>
+    <p>Tell us what's working, what broke, or what you'd like next. It takes a minute and helps a lot.</p>
+    <a class="btn" href="https://forms.gle/WJnGVSevHWTZQEFW8" target="_blank" rel="noopener noreferrer">Give feedback →</a>
   </div>
 
   <div class="notes">
