@@ -12,7 +12,7 @@ const CONFIG = {
   LEFT_SIDE_PORTS: ['C'],
   RIGHT_SIDE_PORTS: ['D'],
   FRONT_SLOT_PORTS: ['C', 'D'],
-  BACK_SLOT_PORTS: ['B', null],
+  BACK_SLOT_PORTS: [null],
   DEFAULT_DRIVE_MODE: '2WD',
   REVERSED_PORTS: [],
   SPEED_MIN: 0,

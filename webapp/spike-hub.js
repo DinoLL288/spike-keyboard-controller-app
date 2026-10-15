@@ -550,20 +550,22 @@
     // ----- disconnect --------------------------------------------------
     async disconnect() {
       if (this._connected) {
-        try { await this.drive(0, 0); } catch (e) {}
-        await sleep(50);
+        // Best-effort stop first: race each BLE call so a dead link can
+        // never hang the disconnect and leave the UI stuck "connected".
+        try { await Promise.race([this.drive(0, 0), sleep(1200)]); } catch (e) {}
+        try { await sleep(50); } catch (e) {}
       }
       this._connected = false;
       this._protocol = null;
       for (const key of Object.keys(this._pending)) {
-        clearTimeout(this._pending[key].timer);
+        try { clearTimeout(this._pending[key].timer); } catch (e) {}
       }
       this._pending = {};
       try {
-        if (this._txChar) await this._txChar.stopNotifications();
+        if (this._txChar) await Promise.race([this._txChar.stopNotifications(), sleep(1200)]);
       } catch (e) {}
       try {
-        if (this._server && this._device) await this._device.gatt.disconnect();
+        if (this._server && this._device) await Promise.race([this._device.gatt.disconnect(), sleep(1200)]);
       } catch (e) {}
       this._server = null;
       this._rxChar = null;
