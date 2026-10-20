@@ -1,0 +1,32 @@
+/* ==========================================================================
+   ==========================================================================
+   Purpose : landing page styles for index.html (hero, buttons, footer).
+   Loaded  : <link rel="stylesheet" href="css/home.css">
+   Notes   : Static marketing page; no runtime theming.
+   ==========================================================================
+   ========================================================================== */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #0e1116; color: #e8ecf3; }
+.wrap { max-width: 720px; margin: 0 auto; padding: 48px 20px; }
+header { text-align: center; margin-bottom: 34px; }
+.logo { font-size: 42px; }
+h1 { font-size: 26px; font-weight: 800; margin-top: 6px; letter-spacing: .3px; }
+.sub { color: #8b97a8; font-size: 13px; margin-top: 8px; line-height: 1.5; }
+.cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.card { display: block; background: #151a22; border: 1px solid #232b36; border-radius: 14px; padding: 22px; text-decoration: none; color: inherit; transition: border-color .15s, transform .1s; }
+.card:hover { border-color: #8ab800; transform: translateY(-2px); }
+.card.feedback { grid-column: 1 / -1; text-align: center; background: #131823; border-style: dashed; }
+.card.feedback:hover { border-color: #4fd8ff; }
+.card.feedback .btn { display: inline-block; margin-top: 12px; background: #4fd8ff; color: #07131c; font-size: 14px; font-weight: 800; padding: 11px 22px; border-radius: 10px; text-decoration: none; transition: background .15s; }
+.card.feedback .btn:hover { background: #7ce4ff; }
+.card .icon { font-size: 30px; }
+.card h2 { font-size: 18px; font-weight: 800; margin: 10px 0 6px; }
+.card .tag { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 1px; color: #ffd23f; border: 1px solid #3a3320; background: #241f14; border-radius: 20px; padding: 3px 10px; margin-bottom: 10px; }
+.card p { font-size: 12.5px; color: #aab6c6; line-height: 1.5; }
+.card .go { font-size: 13px; font-weight: 700; color: #8ab800; margin-top: 14px; }
+.notes { margin-top: 28px; background: #131823; border: 1px solid #232b36; border-radius: 12px; padding: 16px 18px; font-size: 12.5px; color: #aab6c6; line-height: 1.6; }
+.notes b { color: #e8ecf3; }
+.notes code { background: #1e2631; border-radius: 5px; padding: 1px 6px; font-size: 11.5px; color: #4fd8ff; }
+footer { text-align: center; color: #5f6a7a; font-size: 11px; margin-top: 26px; }
+@media (max-width: 600px) { .cards { grid-template-columns: 1fr; } }

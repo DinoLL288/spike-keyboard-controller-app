@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<!-- ==========================================================================
+   ==========================================================================
+   SPIKE Keyboard Controller — Block Studio (block coding page)
+   ==========================================================================
+   Script load order:
+     1. vendor/blockly/*   -> Blockly global + SPIKE block definitions
+     2. js/save_loader.js  -> OpenSpike global (llsp3 / sb3 loaders)
+     3. js/config.js       -> CONFIG global
+     4. js/hub/spike-hub.js-> SPIKE global
+     5. js/pages/studio.js (type=module) -> workspace UI, run/stop, save/load
+        js/engine/* (imported by studio.js) -> parses + runs the program
+   All buttons are bound in studio.js; there are no inline event handlers.
+   ==========================================================================
+   ========================================================================== -->
+<html>
+<head>
+<meta charset="utf-8">
+<title>Block Studio - SPIKE</title>
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16x16.png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="shortcut icon" href="assets/favicon.ico">
+<link rel="stylesheet" href="css/studio.css?v=2">
+<!-- Logger first: it must be installed before Blockly/config/hub/page load so
+     even a failure to load one of those is captured. -->
+<script src="js/log.js?v=1"></script>
+<script src="vendor/blockly/blockly_compressed.js"></script>
+<script src="vendor/blockly/blocks_compressed.js"></script>
+<script src="vendor/blockly/en.js"></script>
+<script src="vendor/blockly/spike_fields.js"></script>
+<script src="vendor/blockly/spike_blocks.js"></script>
+<script src="js/save_loader.js?v=1"></script>
+<script src="js/config.js?v=6"></script>
+<script src="js/hub/spike-hub.js?v=6"></script>
+<script type="module" src="js/pages/studio.js?v=2"></script>
+</head>
+<body>
+<div id="header">
+  <div class="light" id="statusLight"></div>
+  <span class="title">Block Studio</span>
+  <span class="status" id="statusText">Not connected</span>
+  <div class="spacer"></div>
+  <button id="hubBtn">Connect Hub</button>
+  <button class="run" id="runBtn">Run</button>
+  <button class="stop" id="stopBtn">Stop</button>
+  <button id="saveBtn">Save</button>
+  <button id="openBtn">Open</button>
+  <button id="logToggleBtn" title="Show or hide the diagnostic log">Log</button>
+  <button id="logBtn" title="Download the diagnostic log (zip) to send for help">Save log</button>
+</div>
+<div id="blocklyDiv"></div>
+
+<div id="logPanel" class="hidden">
+  <div class="logHead">
+    <span class="logTitle">Diagnostic log</span>
+    <span id="logCount"></span>
+    <div class="spacer"></div>
+    <button id="logSaveBtn">Save log</button>
+    <button id="logClearBtn">Clear</button>
+    <button id="logCloseBtn" title="Close">&times;</button>
+  </div>
+  <div id="logBody"></div>
+</div>
+
+<div id="connOverlay" class="hidden">
+  <div id="connDialog">
+    <div class="connHead"><span>Connect to SPIKE Hub</span><button id="connCloseBtn">&times;</button></div>
+    <div class="connStatus" id="connStatus">Not connected</div>
+    <div id="connList"><div class="connEmpty">Press Scan to look for hubs</div></div>
+    <div class="connButtons">
+      <button id="scanBtn">Scan</button>
+      <button class="run" id="connectBtn" disabled>Connect</button>
+      <button id="disconnectBtn" disabled>Disconnect</button>
+    </div>
+  </div>
+</div>
+
+<div id="saveOverlay" class="hidden">
+  <div id="saveDialog">
+    <div class="connHead"><span id="saveTitle">Save program</span><button id="saveCloseBtn">&times;</button></div>
+    <div class="connStatus" id="saveStatus"></div>
+    <div id="saveBody"></div>
+    <div class="connButtons">
+      <button id="saveAsBtn">Save As…</button>
+      <button id="saveOkBtn" class="run">Save</button>
+      <button id="saveCancelBtn">Cancel</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

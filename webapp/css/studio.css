@@ -1,0 +1,84 @@
+/* ==========================================================================
+   ==========================================================================
+   Purpose : block-studio.html layout: header bar, Blockly canvas, overlays.
+   Loaded  : <link rel="stylesheet" href="css/studio.css">
+   Notes   : Blockly ships its own CSS; only the chrome lives here.
+   ==========================================================================
+   ========================================================================== */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #f0f0f0; }
+#header { display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: #fff; border-bottom: 1px solid #ddd; height: 44px; }
+#header .title { font-weight: 700; font-size: 15px; color: #333; margin-left: 4px; }
+#header .spacer { flex: 1; }
+#header button { border: 1px solid #ccc; background: #fff; border-radius: 6px; padding: 5px 14px; font-size: 13px; cursor: pointer; font-weight: 600; }
+#header button:hover { background: #f5f5f5; }
+#header button.run { background: #00b94d; color: #fff; border-color: #00b94d; }
+#header button.run:hover { background: #00993d; }
+#header button.stop { background: #ff5d64; color: #fff; border-color: #ff5d64; }
+#header button.stop:hover { background: #dd4444; }
+#header .status { font-size: 12px; color: #888; }
+#header .light { width: 16px; height: 16px; border-radius: 50%; background: #ccc; border: 1px solid #999; }
+#blocklyDiv { position: absolute; top: 44px; left: 0; right: 0; bottom: 0; }
+#hubBtn { min-width: 120px; }
+#hubBtn.connected { background: #00b94d; color: #fff; border-color: #00b94d; }
+#connOverlay, #saveOverlay { position: fixed; inset: 0; background: rgba(0,0,0,.35); display: flex; align-items: center; justify-content: center; z-index: 50; }
+#connOverlay.hidden, #saveOverlay.hidden { display: none; }
+#connDialog, #saveDialog { background: #fff; border-radius: 12px; width: 460px; max-width: 92vw; box-shadow: 0 12px 40px rgba(0,0,0,.3); overflow: hidden; }
+#connDialog .connHead { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #f5f5f5; border-bottom: 1px solid #ddd; font-weight: 700; font-size: 14px; }
+#connDialog .connHead button { border: none; background: none; font-size: 18px; cursor: pointer; color: #888; }
+#connDialog .connStatus { padding: 10px 16px; font-size: 12px; color: #666; border-bottom: 1px solid #eee; min-height: 18px; }
+#connList { height: 320px; overflow-y: auto; padding: 8px; }
+.devRow { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px; cursor: pointer; border: 1px solid transparent; }
+.devRow:hover { background: #f0f5ff; }
+.devRow.sel { background: #e3edff; border-color: #0090f5; }
+.devRow .devName { font-size: 13px; font-weight: 600; flex: 1; }
+.devRow .devMeta { font-size: 11px; color: #999; }
+.devBadge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 10px; background: #0090f5; color: #fff; }
+.devBadge.other { background: #bbb; }
+.connButtons { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid #eee; }
+.connButtons button { flex: 1; border: 1px solid #ccc; background: #fff; border-radius: 8px; padding: 8px 12px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.connButtons button:hover { background: #f5f5f5; }
+.connButtons button.run { background: #00b94d; color: #fff; border-color: #00b94d; }
+.connButtons button.run:hover { background: #00993d; }
+.connButtons button:disabled { opacity: .5; cursor: default; }
+.connEmpty { color: #999; font-size: 12px; text-align: center; padding: 40px 0; }
+#saveBody { max-height: 300px; overflow-y: auto; padding: 8px; }
+.saveFieldRow { padding: 14px 16px 4px; }
+.saveFieldRow input { width: 100%; padding: 8px 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; }
+.saveHint { font-size: 11px; color: #999; margin-top: 6px; }
+.saveRow { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid #eee; }
+.saveRow .saveName { flex: 1; font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.saveRow button, .loadFileBtn { border: 1px solid #ccc; background: #fff; border-radius: 6px; padding: 5px 12px; font-size: 12px; font-weight: 600; cursor: pointer; }
+.saveRow button:hover, .loadFileBtn:hover { background: #f5f5f5; }
+.loadFileBtn { width: calc(100% - 20px); margin: 10px; padding: 8px; }
+.saveEmpty { color: #999; font-size: 12px; text-align: center; padding: 30px 0; }
+
+/* ---- Diagnostic log drawer (see js/log.js) -------------------------------
+   Sits above the Blockly canvas but below the connection/save overlays
+   (those use z-index:50), so dialogs still cover it. */
+#logPanel {
+  position: fixed; left: 0; right: 0; bottom: 0; height: 34vh; min-height: 140px;
+  display: flex; flex-direction: column; z-index: 40;
+  background: #1e1f22; color: #d6d6d6; border-top: 1px solid #000;
+  box-shadow: 0 -6px 24px rgba(0,0,0,.35);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px;
+}
+#logPanel.hidden { display: none; }
+.logHead { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: #2a2c30; border-bottom: 1px solid #000; flex: 0 0 auto; }
+.logHead .logTitle { font-weight: 700; font-size: 11px; letter-spacing: .04em; text-transform: uppercase; color: #e8e8e8; }
+.logHead .spacer { flex: 1; }
+#logCount { color: #8a8d93; font-size: 10px; }
+.logHead button { border: 1px solid #4a4d52; background: #35383d; color: #ddd; border-radius: 5px; padding: 3px 9px; font-size: 11px; cursor: pointer; font-family: inherit; }
+.logHead button:hover { background: #44484e; }
+#logBody { flex: 1 1 auto; overflow-y: auto; padding: 6px 10px; white-space: pre-wrap; word-break: break-word; line-height: 1.45; }
+.logLine { padding: 1px 0; border-bottom: 1px solid rgba(255,255,255,.03); }
+.logTime { color: #6f7378; margin-right: 6px; }
+.logLvl { display: inline-block; min-width: 42px; font-weight: 700; margin-right: 6px; }
+.logLine.debug .logLvl { color: #7f8791; }
+.logLine.info  .logLvl { color: #6fb3ff; }
+.logLine.warn  .logLvl { color: #f0b429; }
+.logLine.error .logLvl { color: #ff6b6b; }
+.logLine.error { background: rgba(255,80,80,.07); }
+.logData { color: #9aa0a6; }
+#logBody .logEmpty { color: #777; font-style: italic; }
