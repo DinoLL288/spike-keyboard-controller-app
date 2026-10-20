@@ -1,0 +1,73 @@
+PROPRIETARY SOURCE-AVAILABLE LICENSE
+Copyright (c) 2026 DinoLL288. All rights reserved.
+
+This license governs the source code, assets and documentation contained
+in this repository (the "Software").
+
+By downloading, copying or using the Software, you agree to all of the
+terms below. If you do not agree, you must not use the Software.
+
+
+1. PERMITTED USE
+   You are granted a limited, non-exclusive, non-transferable and
+   revocable license to:
+     (a) download and store a copy of the Software for your own use; and
+     (b) install and use the Software, unmodified, for personal,
+         non-commercial purposes.
+
+
+2. PROHIBITED ACTS
+   You may NOT, and may not permit, enable or encourage any other person
+   to:
+     (a) modify, adapt, translate or otherwise alter the Software, in
+         whole or in part;
+     (b) create any derivative work based on the Software;
+     (c) copy, publish, distribute, sublicense, sell, rent, lease, lend
+         or otherwise make the Software or any part of it available to
+         any third party;
+     (d) reverse engineer, decompile or disassemble the Software, except
+         to the extent such restriction is expressly prohibited by
+         applicable law; or
+     (e) remove, obscure or alter any copyright, license, trademark or
+         attribution notice.
+
+   You may not use the Software, in whole or in part, to create, train or
+   support a competing or substantially similar product.
+
+
+3. NO COMMERCIAL USE
+   The Software may not be used, in whole or in part, for any commercial
+   purpose without the prior written permission of the copyright holder.
+
+
+4. OWNERSHIP
+   The Software is licensed, not sold. The copyright holder retains all
+   right, title and interest in and to the Software. No rights are granted
+   except those expressly stated in this license.
+
+
+5. THIRD-PARTY COMPONENTS
+   This license applies only to original works of the copyright holder.
+   Third-party components bundled with the Software (for example the
+   Blockly libraries under webapp/vendor/) remain under their own
+   licenses and are governed by those terms, not this one.
+
+
+6. TERMINATION
+   This license terminates automatically and immediately if you breach
+   any of its terms. Upon termination you must stop using the Software
+   and destroy all copies in your possession or control.
+
+
+7. NO WARRANTY
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+   EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+   IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM,
+   DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+   OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR
+   THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+
+For permissions beyond the scope of this license, contact the copyright
+holder through the project's repository.
