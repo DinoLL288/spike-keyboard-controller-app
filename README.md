@@ -113,30 +113,6 @@ Then launch:
 open "$HOME/Downloads/spike-keyboard-controller-app/SPIKE_Apps"
 ```
 
----
-
-## One-command download (Terminal)
-
-```bash
-cd ~/Downloads && rm -rf spike-keyboard-controller-app spike-src.zip \
-  && curl -L -o spike-src.zip https://github.com/DinoLL288/spike-keyboard-controller-app/archive/refs/heads/main.zip \
-  && unzip -q spike-src.zip && mv spike-keyboard-controller-app-main spike-keyboard-controller-app \
-  && rm spike-src.zip && echo "done -> ~/Downloads/spike-keyboard-controller-app"
-```
-
-Or clone with history:
-
-```bash
-cd ~/Downloads && rm -rf spike-keyboard-controller-app \
-  && git clone https://github.com/DinoLL288/spike-keyboard-controller-app.git spike-keyboard-controller-app
-```
-
-Then launch:
-
-```bash
-open "$HOME/Downloads/spike-keyboard-controller-app/SPIKE_Apps"
-```
-
 ## License
 
 This project is **proprietary and source-available, not open source**. You may download and
