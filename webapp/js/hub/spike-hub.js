@@ -1,6 +1,7 @@
 // Web port of lego_hub.py - SPIKE Prime / LWP3 over Web Bluetooth.
 // Communicates with the hub through Web Bluetooth (Chrome / Edge / Safari 17+).
 
+// Layout : webapp/js/hub/spike-hub.js (classic script, sets the SPIKE global).
 (function (global) {
   'use strict';
 
@@ -317,10 +318,15 @@
         const [key, raw] = piece.split('=');
         const v = parseInt(parseFloat(raw), 10);
         if (isNaN(v)) continue;
-        const k = key.trim().toUpperCase();
-        if (k === 'B') state.battery = v;
+        const rawK = key.trim();
+        const k = rawK.toUpperCase();
+        if (rawK === 'b') state.battery = v;
         else if (k === 'T') state.temperature = v;
         else if (k.length === 1 && 'ABCDEF'.includes(k)) state[k] = v;
+        else if (/^C[A-F]$/.test(k)) state['color_' + k[1]] = v;
+        else if (k.length === 2 && k[0] === 'U' && 'ABCDEF'.includes(k[1])) {
+          (state.distance = state.distance || {})[k[1]] = v;
+        }
       }
       this._state = state;
       if (this.onState) { try { this.onState(state); } catch (e) {} }
@@ -407,10 +413,14 @@
         return false;
       }
       const dv = new DataView(info.buffer, info.byteOffset, info.byteLength);
-      const fw_major = dv.getUint8(4), fw_minor = dv.getUint8(5), fw_build = dv.getUint8(6);
-      const max_packet = dv.getUint16(7, true);
-      const max_message = dv.getUint16(9, true);
-      const max_chunk = dv.getUint16(11, true);
+      // InfoResponse layout (LEGO spike-prime-docs / lego_hub.py, 17 bytes):
+      //   0 type | 1 rpc_major | 2 rpc_minor | 3-4 rpc_build |
+      //   5 fw_major | 6 fw_minor | 7-8 fw_build |
+      //   9-10 max_packet | 11-12 max_message | 13-14 max_chunk | 15-16 product
+      const fw_major = dv.getUint8(5), fw_minor = dv.getUint8(6), fw_build = dv.getUint16(7, true);
+      const max_packet = dv.getUint16(9, true);
+      const max_message = dv.getUint16(11, true);
+      const max_chunk = dv.getUint16(13, true);
       this._maxPacketSize = max_packet || 200;
       this._maxChunkSize = max_chunk || 128;
       this.onLogInfo(`Hub info: fw ${fw_major}.${fw_minor}.${fw_build} ` +
@@ -544,28 +554,41 @@
         slots.map(([p, sp]) => `${p}=${this.profile.effective_speed(p, sp)}`).join(' '));
     }
 
-    async stop() { await this.drive(0, 0); }
+    async stop() {
+      if (!this._connected || !this._protocol) return;
+      const profile = this.profile;
+      const ports = [...new Set([...profile.all_ports, ...C.AVAILABLE_PORTS])];
+
+      if (this._protocol === 'lwp3') {
+        for (const port of ports) {
+          await this._writeFrame(this._lwp3MotorFrame(port, 0));
+        }
+        return;
+      }
+
+      const cmd = String(ports.length) + ports.map((p) => `${p}+000`).join('');
+      await this._writeFrame(this._primeTunnel(new TextEncoder().encode(cmd)));
+      this.onLogInfo('Motor command: ' + ports.map((p) => `${p}=0`).join(' '));
+    }
     state() { return this._state; }
 
     // ----- disconnect --------------------------------------------------
     async disconnect() {
       if (this._connected) {
-        // Best-effort stop first: race each BLE call so a dead link can
-        // never hang the disconnect and leave the UI stuck "connected".
-        try { await Promise.race([this.drive(0, 0), sleep(1200)]); } catch (e) {}
-        try { await sleep(50); } catch (e) {}
+        try { await this.drive(0, 0); } catch (e) {}
+        await sleep(50);
       }
       this._connected = false;
       this._protocol = null;
       for (const key of Object.keys(this._pending)) {
-        try { clearTimeout(this._pending[key].timer); } catch (e) {}
+        clearTimeout(this._pending[key].timer);
       }
       this._pending = {};
       try {
-        if (this._txChar) await Promise.race([this._txChar.stopNotifications(), sleep(1200)]);
+        if (this._txChar) await this._txChar.stopNotifications();
       } catch (e) {}
       try {
-        if (this._server && this._device) await Promise.race([this._device.gatt.disconnect(), sleep(1200)]);
+        if (this._server && this._device) await this._device.gatt.disconnect();
       } catch (e) {}
       this._server = null;
       this._rxChar = null;

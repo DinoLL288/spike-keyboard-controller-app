@@ -3,6 +3,7 @@
 //   https://lego.github.io/spike-prime-docs/
 // and the LEGO Wireless Protocol 3.x specification.
 
+// Layout : webapp/js/config.js (classic script, sets the CONFIG global).
 const CONFIG = {
   APP_NAME: 'SPIKE Keyboard Controller',
   DEFAULT_SPEED_PERCENT: 50,
@@ -17,6 +18,17 @@ const CONFIG = {
   REVERSED_PORTS: [],
   SPEED_MIN: 0,
   SPEED_MAX: 100,
+
+  // ---- turning ----
+  // TURN_STRENGTH blends how hard a moving turn bites:
+  //   0   = no turn (inner wheel keeps full speed)
+  //   50  = inner wheel stops (classic pivot arc)
+  //   100 = inner wheel counter-rotates (tightest)
+  DEFAULT_TURN_STRENGTH: 35,
+  TURN_STRENGTH_MIN: 0,
+  TURN_STRENGTH_MAX: 100,
+  TURN_RAMP_MS: 120,
+  TURN_RAMP_STEPS: 4,
 
   // ---- GATT ----
   SPIKE_SERVICE_UUID: '0000fd02-0000-1000-8000-00805f9b34fb',
@@ -108,6 +120,60 @@ def send_attach():
     bridge_send(attach_line())
     bridge_send("rdy")
 
+def sensor_color(letter):
+    try:
+        import color_sensor
+        return int(color_sensor.color(PORTS[letter]))
+    except Exception:
+        return None
+
+try:
+    import distance_sensor
+except Exception:
+    distance_sensor = None
+
+_dist_probe_cache = {}
+
+def _try_dist_call(fn):
+    try:
+        d = fn()
+    except Exception:
+        return None
+    try:
+        if d is None or isinstance(d, bool):
+            return None
+        return int(d)
+    except Exception:
+        return None
+
+def distance_mm(letter):
+    p = PORTS[letter]
+    if letter in _dist_probe_cache:
+        fn = _dist_probe_cache[letter]
+        return _try_dist_call(fn) if fn else None
+    cands = []
+    if distance_sensor is not None:
+        cands.append(lambda: distance_sensor.distance(p))
+    try:
+        dev = p.device
+        names = dir(dev)
+    except Exception:
+        dev = None
+        names = []
+    for n in names:
+        if "dist" in n.lower():
+            try:
+                fn = getattr(dev, n)
+            except Exception:
+                continue
+            cands.append((lambda f: lambda: f())(fn))
+    for c in cands:
+        d = _try_dist_call(c)
+        if d is not None:
+            _dist_probe_cache[letter] = c
+            return d
+    return None
+
 def battery_pct():
     try:
         v = hub.battery.voltage()
@@ -148,6 +214,14 @@ def state_line():
         parts.append("t=" + str(t))
     for letter in "ABCDEF":
         parts.append(letter + "=" + str(motor_angle(letter)))
+    for letter in "ABCDEF":
+        c = sensor_color(letter)
+        if c is not None:
+            parts.append("c" + letter + "=" + str(c))
+    for letter in "ABCDEF":
+        d = distance_mm(letter)
+        if d is not None:
+            parts.append("U" + letter + "=" + str(d))
     return "state:" + ",".join(parts)
 
 def tunnel_send(text):
