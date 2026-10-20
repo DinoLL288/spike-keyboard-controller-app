@@ -136,3 +136,10 @@ Then launch:
 ```bash
 open "$HOME/Downloads/spike-keyboard-controller-app/SPIKE_Apps"
 ```
+
+## License
+
+This project is **proprietary and source-available, not open source**. You may download and
+use it **unmodified** for personal, non-commercial purposes. You may **not** modify it,
+create derivative works, or redistribute it, and commercial use is not permitted.
+See [LICENSE](LICENSE) for the full terms.
