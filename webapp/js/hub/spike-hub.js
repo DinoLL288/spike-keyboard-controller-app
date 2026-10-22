@@ -173,6 +173,7 @@
       this.onLog = null;
       this.onAttach = null;
       this.onState = null;
+      this._lastMotorSpeed = {};  // port letter -> signed speed
     }
 
     get is_connected() { return this._connected; }
@@ -509,9 +510,14 @@
     // ----- motor commands ----------------------------------------------
     async startMotor(port, speed, log = true) {
       const letter = normPort(port);
+      if (!letter) return;
       speed = clamp(round(speed), -100, 100);
       speed = this.profile.effective_speed(letter, speed);
       if (!this._connected || !this._protocol) return;
+      if (this._lastMotorSpeed[letter] === speed) {
+        return;
+      }
+      this._lastMotorSpeed[letter] = speed;
       if (log) this.onLogInfo(`Motor command: ${letter}=${speed}`);
       if (this._protocol === 'lwp3') {
         await this._writeFrame(this._lwp3MotorFrame(letter, speed));
@@ -521,7 +527,11 @@
       }
     }
 
-    async stopMotor(port) { await this.startMotor(port, 0, false); }
+    async stopMotor(port) { 
+      const letter = normPort(port);
+      if (letter && this._lastMotorSpeed[letter] === 0) return;
+      await this.startMotor(port, 0, false); 
+    }
 
     async drive(leftSpeed, rightSpeed, backSpeed) {
       leftSpeed = clamp(round(leftSpeed || 0), -100, 100);
@@ -537,21 +547,30 @@
         profile.back_ports.forEach((p) => { if (p) slots.push([p, backSpeed]); });
       }
 
+      const toSend = [];
+      for (const [port, sp] of slots) {
+        const p = normPort(port);
+        if (!p) continue;
+        const eff = this.profile.effective_speed(p, sp);
+        if (this._lastMotorSpeed[p] === eff) continue;
+        toSend.push([p, eff]);
+        this._lastMotorSpeed[p] = eff;
+      }
+      if (toSend.length === 0) return;
+
       if (this._protocol === 'lwp3') {
-        for (const [port, sp] of slots) {
-          await this._writeFrame(
-            this._lwp3MotorFrame(port, this.profile.effective_speed(port, sp)));
+        for (const [port, eff] of toSend) {
+          await this._writeFrame(this._lwp3MotorFrame(port, eff));
         }
       } else {
-        const parts = slots.map(([port, sp]) => {
-          const e = this.profile.effective_speed(port, sp);
-          return `${port}${e >= 0 ? '+' : '-'}${String(Math.abs(e)).padStart(3, '0')}`;
+        const parts = toSend.map(([port, eff]) => {
+          return `${port}${eff >= 0 ? '+' : '-'}${String(Math.abs(eff)).padStart(3, '0')}`;
         });
         const cmd = String(parts.length) + parts.join('');
         await this._writeFrame(this._primeTunnel(new TextEncoder().encode(cmd)));
       }
       this.onLogInfo('Motor command: ' +
-        slots.map(([p, sp]) => `${p}=${this.profile.effective_speed(p, sp)}`).join(' '));
+        toSend.map(([p, eff]) => `${p}=${eff}`).join(' '));
     }
 
     async stop() {
@@ -559,16 +578,26 @@
       const profile = this.profile;
       const ports = [...new Set([...profile.all_ports, ...C.AVAILABLE_PORTS])];
 
+      const toSend = [];
+      for (const port of ports) {
+        const p = normPort(port);
+        if (!p) continue;
+        if (this._lastMotorSpeed[p] === 0) continue;
+        toSend.push(p);
+        this._lastMotorSpeed[p] = 0;
+      }
+      if (toSend.length === 0) return;
+
       if (this._protocol === 'lwp3') {
-        for (const port of ports) {
+        for (const port of toSend) {
           await this._writeFrame(this._lwp3MotorFrame(port, 0));
         }
         return;
       }
 
-      const cmd = String(ports.length) + ports.map((p) => `${p}+000`).join('');
+      const cmd = String(toSend.length) + toSend.map((p) => `${p}+000`).join('');
       await this._writeFrame(this._primeTunnel(new TextEncoder().encode(cmd)));
-      this.onLogInfo('Motor command: ' + ports.map((p) => `${p}=0`).join(' '));
+      this.onLogInfo('Motor command: ' + toSend.map((p) => `${p}=0`).join(' '));
     }
     state() { return this._state; }
 
@@ -596,6 +625,7 @@
       this._hubChar = null;
       this._bridgeLoaded = false;
       this._rxBuffer = [];
+      this._lastMotorSpeed = {};
     }
   }
 

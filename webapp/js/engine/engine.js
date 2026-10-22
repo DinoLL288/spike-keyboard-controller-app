@@ -47,6 +47,9 @@ class Engine {
     this.default_speed = 50;
     this.volume = 100;
     this.broadcasts = {};
+    this.motorSpeeds = {};
+    this._lastMotorCmd = {}; // port -> signed speed
+  }
     this.cond_hats = [];
     this.t0 = 0;
     this.running = false;
@@ -124,6 +127,7 @@ class Engine {
     this._stop = true;
     for (const tk of this.tasks) tk.cancel();
     this.tasks.clear();
+    this._lastMotorCmd = {};
     try { this.hub.stop(); } catch (e) {}
   }
 
@@ -269,16 +273,29 @@ class Engine {
     } else if (op === 'stop_moving') {
       await hub.drive(0, 0);
     } else if (op === 'start_motor' || op === 'motor_on') {
-      await hub.startMotor(p.port || 'A', this._motorPower(p.port || 'A', p));
+      const port = String(p.port || 'A').trim().toUpperCase();
+      const power = this._motorPower(port, p);
+      if (this._lastMotorCmd[port] === power) {
+        // already running at this power
+      } else {
+        this._lastMotorCmd[port] = power;
+        await hub.startMotor(port, power);
+      }
     } else if (op === 'stop_motor') {
-      await hub.startMotor(p.port || 'A', 0);
+      const port = String(p.port || 'A').trim().toUpperCase();
+      if (this._lastMotorCmd[port] === 0) {
+        // already stopped
+      } else {
+        this._lastMotorCmd[port] = 0;
+        await hub.startMotor(port, 0);
+      }
     } else if (op === 'run_motor' || op === 'motor_time') {
-      const port = p.port || 'A';
+      const port = String(p.port || 'A').trim().toUpperCase();
       const power = this._motorPower(port, p);
       const secs = Math.max(0, parseFloat(p.time) || 1);
-      await hub.startMotor(port, power);
+      if (this._lastMotorCmd[port] !== power) { this._lastMotorCmd[port] = power; await hub.startMotor(port, power); }
       await sleepMs(secs * 1000);
-      await hub.startMotor(port, 0);
+      if (this._lastMotorCmd[port] !== 0) { this._lastMotorCmd[port] = 0; await hub.startMotor(port, 0); }
     } else if (op === 'set_motor_angle' || op === 'motor_angle') {
       const port = p.port || 'A';
       const power = this._motorPower(port, p);
@@ -289,7 +306,7 @@ class Engine {
       const target = num(p.deg != null ? p.deg : 0);
       const startAngle = this._portAngle(port);
       const estimate = this._estimateTurnSeconds(target - startAngle, power);
-      await hub.startMotor(port, power);
+      if (this._lastMotorCmd[port] !== power) { this._lastMotorCmd[port] = power; await hub.startMotor(port, power); }
       const t0 = this._time();
       const timeout = estimate + 3;
       while (this.running && !this._stop && !(token && token.cancelled)) {
@@ -300,7 +317,7 @@ class Engine {
         if (elapsed >= estimate) break;
         await sleepMs(60);
       }
-      await hub.startMotor(port, 0);
+      if (this._lastMotorCmd[port] !== 0) { this._lastMotorCmd[port] = 0; await hub.startMotor(port, 0); }
     } else if (op === 'set_motor_speed') {
       const port = String(p.port || 'A');
       this.motorSpeeds[port.trim().toUpperCase()] = pct(p.power != null ? p.power : 50);
